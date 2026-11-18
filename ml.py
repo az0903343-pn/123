@@ -41,7 +41,7 @@ def money(n):
 
 
 def train_model(df: pd.DataFrame):
-    """Train a RandomForest that predicts price from category / brand / fuel / specs."""
+    """Train + fit a RandomForest that predicts price from category / brand / fuel / specs."""
     # 10,000+ rows par bhi app boot fast rahe - trees adaptively kam
     n_trees = 250 if len(df) < 3000 else 120
     pre = ColumnTransformer(
@@ -50,12 +50,14 @@ def train_model(df: pd.DataFrame):
             ("num", StandardScaler(), NUM_COLS),
         ]
     )
-    return Pipeline(
+    model = Pipeline(
         [
             ("pre", pre),
             ("rf", RandomForestRegressor(n_estimators=n_trees, random_state=42)),
         ]
     )
+    model.fit(df[CAT_COLS + NUM_COLS], df["price_pkr"])
+    return model
 
 
 def ensure_model(df: pd.DataFrame):

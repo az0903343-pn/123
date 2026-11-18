@@ -56,11 +56,16 @@ def _data_text(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def ask_openai(question: str, df: pd.DataFrame):
-    """Real ChatGPT answer, or None when unavailable (no key / any error)."""
+def ask_openai(question: str, df: pd.DataFrame, history=None):
+    """Real ChatGPT answer (with prior conversation context), or None when unavailable."""
     key = _key()
     if not key:
         return None
+    msgs = []
+    for m in (history or []):
+        if m.get("role") in ("user", "assistant") and m.get("content"):
+            msgs.append({"role": m["role"], "content": m["content"]})
+    msgs = msgs[-8:]  # aakhri 8 messages ka context
     try:
         resp = requests.post(
             _API_URL,
@@ -84,6 +89,7 @@ def ask_openai(question: str, df: pd.DataFrame):
                             "Mention a pro (faida) and a con (nuqsan) when suggesting vehicles."
                         ),
                     },
+                    *msgs,
                     {"role": "user", "content": question},
                 ],
                 "max_tokens": 500,
@@ -297,16 +303,36 @@ def fallback_answer(question: str, df: pd.DataFrame) -> str:
     n = _norm(question)
     small = ""
 
-    if re.search(r"\b(salam|assalam|asalam|asslam|salaam|hello|hi|hey)\b", n) or re.search(r"سلام|नमस्ते|مرحبا|السلام", n):
+    if re.search(r"\b(salam|assalam|asalam|asslam|salaam|hello|hi|hey|good morning|good evening)\b", n) or re.search(r"سلام|नमस्ते|مرحبا|السلام", n):
         small = l["greet"]
-    elif re.search(r"\b(how are you|kaise ho|kaise hain|kya haal|haal)\b", n) or re.search(r"كيف حالك|कैसे हो|कैसे हैं", n):
+    elif re.search(r"\b(how are you|how r u|kaise ho|kaise hain|kya haal|haal)\b", n) or re.search(r"كيف حالك|कैसे हो|कैसे हैं", n):
         small = l["how"]
     elif re.search(r"\b(thanks|thank you|shukriya|shukria)\b", n) or re.search(r"شكرا|धन्यवाद", n):
         small = l["thx"]
-    elif re.search(r"\b(bye|goodbye|khuda hafiz|alvida)\b", n) or re.search(r"الوداع|अलविदा|خدا حافظ", n):
+    elif re.search(r"\b(bye|goodbye|khuda hafiz|alvida|good night)\b", n) or re.search(r"الوداع|अलविदा|خدا حافظ", n):
         return l["bye"]  # no vehicle push after goodbye
+    elif re.search(r"\b(who are you|your name|tum kaun|aap kaun|tumhara naam|apna intro|introduce)\b", n):
+        small = (
+            "I'm **V-Bot** 🤖 — the AI companion of Vhology! I know all 10,000+ vehicles in the "
+            "dataset (prices, pros, cons, mods) and with ChatGPT ON I can chat about *anything* "
+            "— studies, sports, jokes, general knowledge. Try: *\"best car under 20 lakh\"*!"
+        )
+    elif re.search(r"\b(what can you do|help|madad|features|how to use)\b", n):
+        small = (
+            "Here's what I can do 👇\n\n"
+            "- 🚗 **Vehicle search** — *\"civic ka price?\"*, *\"CD 70 dikhao\"*\n"
+            "- 💰 **Budget picks** — *\"best car under 15 lakh\"*, *\"1 crore ki SUV\"*\n"
+            "- 🏆 **Superlatives** — *\"cheapest bike\"*, *\"fastest vehicle\"*\n"
+            "- 👨‍👩‍👧 **Family picks** — *\"7 seater family car\"*\n"
+            "- 💬 **General chat** — with ChatGPT ON, ask me *anything*!"
+        )
+    elif re.search(r"\b(joke|hasao|mazak)\b", n):
+        small = "Why did the car apply for a job? 🚗 It wanted to *drive* its career forward! 😄"
+    elif re.search(r"\b(ok|okay|okey|good|great|nice|cool|wow|amazing|super|acha|achha|theek|haan|haanji|han ji|yes|yep|yup|lol|hmm)\b", n):
+        small = "Glad to hear that! 😊 Anything else you'd like to ask — vehicles, budget, or any topic?"
 
     bud = parse_budget(question)
+    has_intent = bud >= 50_000 or _vehicle_sounding(n)
     if bud >= 50_000:
         pool = df[df["price_pkr"] <= bud].sort_values("price_pkr", ascending=False)
         if len(pool):
@@ -340,13 +366,16 @@ def fallback_answer(question: str, df: pd.DataFrame) -> str:
             pop = df[df["name"].str.contains("Alto|Swift|CD 70 Dream|Sportage", regex=True)].head(1)
             veh = l["general"] + "\n\n" + l["def"] + ":\n\n" + _cards(pop, lang)
 
+    # pure smalltalk (koi vehicle/budget sawal nahi) -> sirf baat, vehicle push nahi
+    if small and not has_intent:
+        return small
     return (small + "\n\n" + veh).strip()
 
 
 # ================================================================ chat UI
-def _reply(question: str, df: pd.DataFrame) -> str:
-    """ChatGPT first, built-in engine as guaranteed fallback (never raises)."""
-    ans = ask_openai(question, df)
+def _reply(question: str, df: pd.DataFrame, history=None) -> str:
+    """ChatGPT first (full conversation context), built-in engine as fallback (never raises)."""
+    ans = ask_openai(question, df, history)
     if ans:
         return ans
     try:
@@ -357,6 +386,35 @@ def _reply(question: str, df: pd.DataFrame) -> str:
 
 _CHIPS = ["Hi 👋", "Best car under 15 lakh", "Cheapest bike", "Fastest vehicle"]
 
+# cute robot avatar (gradient circle + white visor robot) - dock header ke liye
+_AVATAR_SVG = (
+    "<svg viewBox='0 0 64 64' width='42' height='42' xmlns='http://www.w3.org/2000/svg'>"
+    "<defs>"
+    "<linearGradient id='vbg' x1='0' y1='0' x2='1' y2='1'>"
+    "<stop offset='0' stop-color='#a855f7'/><stop offset='.55' stop-color='#c026d3'/>"
+    "<stop offset='1' stop-color='#ec4899'/></linearGradient>"
+    "</defs>"
+    "<circle cx='32' cy='32' r='30' fill='url(#vbg)'/>"
+    "<circle cx='32' cy='32' r='30' fill='none' stroke='rgba(255,255,255,.25)' stroke-width='2'/>"
+    # antenna
+    "<line x1='32' y1='21' x2='32' y2='15' stroke='#fff' stroke-width='3' stroke-linecap='round'/>"
+    "<circle cx='32' cy='13' r='2.8' fill='#fbbf24'/>"
+    # headphone band + cups
+    "<path d='M15 31 a17 17 0 0 1 34 0' stroke='#fff' stroke-width='4' fill='none'/>"
+    "<rect x='10' y='29' width='7' height='13' rx='3.5' fill='#fff'/>"
+    "<rect x='47' y='29' width='7' height='13' rx='3.5' fill='#fff'/>"
+    # head
+    "<rect x='18' y='22' width='28' height='25' rx='9' fill='#fff'/>"
+    # visor
+    "<rect x='22' y='27' width='20' height='13' rx='6.5' fill='#1e1b4b'/>"
+    # eyes
+    "<circle cx='28.5' cy='33.5' r='2.4' fill='#67e8f9'/>"
+    "<circle cx='35.5' cy='33.5' r='2.4' fill='#67e8f9'/>"
+    # mouth
+    "<rect x='29' y='43' width='6' height='2.6' rx='1.3' fill='#c4b5fd'/>"
+    "</svg>"
+)
+
 
 def _ask(text: str, df: pd.DataFrame):
     """User message -> answer -> history -> rerun (chat_input aur chips dono isko use karte hain)."""
@@ -364,9 +422,10 @@ def _ask(text: str, df: pd.DataFrame):
     text = (text or "").strip()
     if not text:
         return
+    hist = [dict(m) for m in ss.get("chat_hist", [])]  # context BEFORE this message
     ss.chat_hist.append({"role": "user", "content": text})
     with st.spinner("V-Bot is thinking..."):
-        ans = _reply(text, df)
+        ans = _reply(text, df, hist)
     ss.chat_hist.append({"role": "assistant", "content": ans})
     st.rerun()
 
@@ -383,17 +442,26 @@ def render_chat(df: pd.DataFrame):
     ss.setdefault("chat_hist", [])
     gpt_on = bool(_key())
 
-    # border=True zaroori hai - CSS isi wrapper ko corner me fix karta hai
-    with st.container(border=True):
+    # border=True + key: naya Streamlit container ko .st-key-vbot class deta hai
+    # (CSS isi se corner me fix karta hai). Purane version par bina key fallback.
+    try:
+        dock = st.container(border=True, key="vbot")
+    except TypeError:
+        dock = st.container(border=True)
+    with dock:
         hc, xc = st.columns([5, 1])
         with hc:
             status = (
-                "🟢 ChatGPT <b>ON</b> &middot; ask me anything, any topic"
+                "🟢 ChatGPT ON · ask me anything, any topic"
                 if gpt_on
-                else "🟡 Fallback mode &middot; vehicles + small talk"
+                else "🟡 Fallback mode · vehicles + small talk"
             )
             st.markdown(
-                f"<div class='stepchip'>[ <b>V-BOT</b> ] &middot; {status}</div>",
+                f"<div class='vbot-head'>"
+                f"<span class='vbot-badge'>{_AVATAR_SVG}</span>"
+                f"<span class='vbot-info'><span class='vbot-title'>V-BOT</span>"
+                f"<span class='vbot-status'>{status}</span></span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
         with xc:

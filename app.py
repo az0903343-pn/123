@@ -132,7 +132,11 @@ st.markdown(
         box-shadow: 0 0 0 1px rgba(34,197,94,.22), 0 20px 55px rgba(34,197,94,.12), 0 20px 55px rgba(0,0,0,.6); }
     .pimg { position: relative; height: 150px; overflow: hidden; background: rgba(255,255,255,.04); }
     .veh-card .pimg { height: 140px; }
-    .pimg img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease;
+    .pimg .emo { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center;
+        justify-content: center; font-size: 4.2rem; line-height: 1;
+        filter: drop-shadow(0 10px 26px rgba(34,197,94,.35)); }
+    .pimg img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%;
+        object-fit: cover; transition: transform .5s ease;
         filter: saturate(.92); }
     .cat-card:hover .pimg img, .veh-card:hover .pimg img { transform: scale(1.09); filter: saturate(1.05); }
     .pimg .tag { position: absolute; left: 10px; bottom: 9px; font-weight: 700; color: #fff;
@@ -200,27 +204,85 @@ st.markdown(
     [data-testid="stChatInputSubmitButton"] button { background: linear-gradient(135deg, #16a34a, #4ade80) !important; }
 
     /* ---- corner chat dock (V-Bot, bottom-right) ---- */
+    /* naya Streamlit: st.container(border=True, key="vbot") -> class .st-key-vbot
+       purana Streamlit: :has(stChatInput) fallback - dono me se jo chale */
+    .st-key-vbot,
     div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
-        position: fixed; bottom: 14px; right: 14px; z-index: 99999;
-        width: 400px; max-width: calc(100vw - 24px);
-        background: rgba(5,8,5,.97) !important;
-        border: 1px solid rgba(134,239,172,.32) !important;
-        border-radius: 18px !important;
-        box-shadow: 0 24px 60px rgba(0,0,0,.65), 0 0 40px rgba(34,197,94,.12);
+        position: fixed; bottom: 14px; right: 14px; z-index: 999999;
+        width: 400px !important; max-width: calc(100vw - 24px) !important;
+        background: rgba(4,7,4,.97) !important;
+        border: 1px solid rgba(134,239,172,.35) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 24px 70px rgba(0,0,0,.7), 0 0 46px rgba(34,197,94,.16);
         padding: 12px 14px 12px !important;
-        backdrop-filter: blur(10px);
+        backdrop-filter: blur(14px);
     }
+    .st-key-vbot [data-testid="stButton"] > button,
     div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stButton"] > button {
         font-size: .68rem !important; padding: 5px 8px !important; border-radius: 999px !important;
         background: rgba(34,197,94,.12) !important; border: 1px solid rgba(134,239,172,.3) !important;
         color: #b9e6c4 !important; font-weight: 700;
     }
+    .st-key-vbot [data-testid="stButton"] > button:hover,
     div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stButton"] > button:hover {
         background: rgba(34,197,94,.28) !important; color: #fff !important;
     }
+    .st-key-vbot [data-testid="stChatMessage"],
     div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stChatMessage"] {
         background: rgba(255,255,255,.04) !important;
     }
+    /* dock header: robot avatar + title */
+    .vbot-head { display: flex; align-items: center; gap: 10px; }
+    .vbot-badge { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%;
+        filter: drop-shadow(0 4px 14px rgba(192,38,211,.45)); }
+    .vbot-badge svg { display: block; width: 100%; height: 100%; }
+    .vbot-info { display: flex; flex-direction: column; min-width: 0; }
+    .vbot-title { font-family: ui-monospace, monospace; font-weight: 800; font-size: .95rem;
+        letter-spacing: 1.5px; color: #fff; }
+    .vbot-status { font-size: .72rem; color: #9db2a4; line-height: 1.25; }
+
+    /* dock ke andar scrollbar patla */
+    .st-key-vbot ::-webkit-scrollbar { width: 6px; }
+    .st-key-vbot ::-webkit-scrollbar-thumb { background: rgba(34,197,94,.35); border-radius: 999px; }
+
+    /* ---- UI polish: slider neon green ---- */
+    [data-testid="stSlider"] [role="slider"] {
+        background: linear-gradient(135deg, #16a34a, #4ade80) !important;
+        box-shadow: 0 0 14px rgba(74,222,128,.65) !important;
+    }
+    [data-testid="stSlider"] > div { background-color: rgba(134,239,172,.28) !important; }
+    [data-testid="stSlider"] [data-testid="stSliderTickBar"] > div { background: rgba(134,239,172,.28) !important; }
+
+    /* ---- custom scrollbar (poori app) ---- */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #030503; }
+    ::-webkit-scrollbar-thumb { background: rgba(34,197,94,.3); border-radius: 999px;
+        border: 2px solid #030503; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(34,197,94,.55); }
+
+    /* ---- buttons: glow + lift ---- */
+    .stButton > button { transition: all .25s ease !important; }
+    .stButton > button:hover { transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(34,197,94,.25) !important; }
+    .stButton > button[kind="primary"] { background: linear-gradient(135deg, #16a34a, #4ade80) !important;
+        border: none !important; color: #04180a !important; font-weight: 800 !important;
+        box-shadow: 0 6px 26px rgba(34,197,94,.35) !important; }
+
+    /* ---- stepchip: pulse dot feel ---- */
+    .stepchip { animation: chipIn .5s ease both; }
+    @keyframes chipIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    /* ---- cards: gradient border + lift ---- */
+    .cat-card, .veh-card { transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease !important; }
+    .cat-card:hover, .veh-card:hover { transform: translateY(-5px) !important;
+        border-color: rgba(134,239,172,.55) !important;
+        box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 34px rgba(34,197,94,.18) !important; }
+
+    /* ---- hero: animated gradient word ---- */
+    .hero h1 .gg { background: linear-gradient(90deg, #a7f3c0, #22c55e, #a7f3c0);
+        background-size: 200% 100%; -webkit-background-clip: text; background-clip: text;
+        color: transparent; animation: ggFlow 5s ease-in-out infinite; }
+    @keyframes ggFlow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
     </style>
     """,
     unsafe_allow_html=True,
@@ -256,20 +318,24 @@ def go(step):
 
 
 def photo_card(html_cls, img, title, inner="", icon=""):
+    emo = icon or "🚗"
+    img_html = ""
     if img:
         small, big = images.pair_for_url(img)
-        big = big.replace("'", "%27")
-        img_html = (
-            f"<img src='{small}' alt='' loading='lazy' "
-            f"onerror=\"this.onerror=null;this.src='{big}'\">"
-        )
-    else:
-        img_html = ""
+        if small:
+            big = big.replace("'", "%27")
+            # fallback chain: 480px thumb -> original -> emoji (img hide ho jata hai)
+            img_html = (
+                f"<img src='{small}' alt='' loading='lazy' "
+                f"onerror=\"if(!this.dataset.f){{this.dataset.f=1;this.src='{big}';}}"
+                f"else{{this.style.display='none';}}\">"
+            )
     return (
         f"<div class='{html_cls}'>"
-        f"<div class='pimg'>{img_html}"
+        f"<div class='pimg'>"
+        f"<span class='emo'>{emo}</span>"
+        f"{img_html}"
         f"<span class='tag'>{title}</span>"
-        + (f"<span class='ic'>{icon}</span>" if icon else "")
         + "</div>" + inner + "</div>"
     )
 
@@ -298,7 +364,7 @@ if ss.step == "cat":
             n = int((DF["category"] == cat).sum())
             inner = f"<div class='csub'>{TAGLINE[cat]} · {n} options</div>"
             with col:
-                st.markdown(photo_card("cat-card", img, f"{EMOJI[cat]} {cat}", inner), unsafe_allow_html=True)
+                st.markdown(photo_card("cat-card", img, cat, inner, icon=EMOJI[cat]), unsafe_allow_html=True)
                 st.markdown("<div class='vbtn'>", unsafe_allow_html=True)
                 if st.button("Select ▸", key=f"cat_{cat}", use_container_width=True):
                     ss.cat = cat
@@ -334,7 +400,10 @@ elif ss.step == "budget":
         with col:
             if st.button(label, key=f"pre_{label}", use_container_width=True):
                 ss.budget = min(amount, hi)  # clamp to this category's range
-                ss.budget_slider = ss.budget  # keep the slider in sync
+                # slider ki widget state delete karo - agle run par value= se
+                # nayi budget se instantiate hoga (warna WidgetAlreadyInstantiatedError)
+                if "budget_slider" in ss:
+                    del ss["budget_slider"]
                 go("budget")
     if ss.budget_slider != ss.budget:
         ss.budget = ss.budget_slider
