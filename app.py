@@ -12,7 +12,6 @@ import streamlit as st
 import urllib.parse
 
 import ai
-import chatbot_widget
 import images
 import ml
 
@@ -86,7 +85,8 @@ st.markdown(
         mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 72%);
     }
     section[data-testid="stSidebar"] { display: none; }
-    div.block-container { padding-top: 1.2rem; max-width: 1150px; position: relative; z-index: 1; }
+    div.block-container { padding-top: 1.2rem; max-width: 1150px; position: relative; z-index: 1;
+        padding-bottom: 560px; }
 
     /* ---- navbar ---- */
     .nav { display: flex; align-items: center; gap: 6px; background: rgba(9,12,9,.85);
@@ -198,6 +198,29 @@ st.markdown(
     [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p { font-size: .92rem; }
     [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] a { color: #86efac !important; }
     [data-testid="stChatInputSubmitButton"] button { background: linear-gradient(135deg, #16a34a, #4ade80) !important; }
+
+    /* ---- corner chat dock (V-Bot, bottom-right) ---- */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
+        position: fixed; bottom: 14px; right: 14px; z-index: 99999;
+        width: 400px; max-width: calc(100vw - 24px);
+        background: rgba(5,8,5,.97) !important;
+        border: 1px solid rgba(134,239,172,.32) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 24px 60px rgba(0,0,0,.65), 0 0 40px rgba(34,197,94,.12);
+        padding: 12px 14px 12px !important;
+        backdrop-filter: blur(10px);
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stButton"] > button {
+        font-size: .68rem !important; padding: 5px 8px !important; border-radius: 999px !important;
+        background: rgba(34,197,94,.12) !important; border: 1px solid rgba(134,239,172,.3) !important;
+        color: #b9e6c4 !important; font-weight: 700;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stButton"] > button:hover {
+        background: rgba(34,197,94,.28) !important; color: #fff !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stChatMessage"] {
+        background: rgba(255,255,255,.04) !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -464,9 +487,5 @@ elif ss.step == "detail":
         if st.button("🏠 Naya search shuru karein", use_container_width=True):
             go("cat")
 
-# ---------------------------------------------------------------- AI chat
-st.write("")
+# ---------------------------------------------------------------- AI chat (corner dock)
 ai.render_chat(DF)
-
-# floating V-Bot bubble (instant rule-based helper, bottom-right)
-chatbot_widget.render_chatbot(DF)

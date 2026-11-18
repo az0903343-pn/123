@@ -18,21 +18,22 @@ deta hai — asli photos, faide/nuqsan, modifications, **PakWheels buy link**, a
   - 🛠️ Popular **modifications**
   - 🛒 **Buy on PakWheels** button + **[ MORE PLATFORMS ]** row: OLX Pakistan,
     CarDekho, Google Prices aur Images — har vehicle ke liye live links
-- **💬 AI Chat (ChatGPT):** page ke neeche full chat — ChatGPT (`gpt-4o-mini`) dataset
-  ke context ke sath juda hua hai, **har sawal ka jawab** (general bhi, vehicles bhi),
-  user ki language khud pehchan kar (English, Roman Urdu, Hindi, Arabic)
-- **🤖 V-Bot floating widget** (bottom-right, instant): ChatGPT key na ho ya API fail ho
-  to bhi chat ka jawab built-in multilingual rule engine se **har haal me** milta hai —
-  zero errors
+- **💬 V-Bot AI Chat — corner dock (bottom-right):** ek hi chatbot, page ke kony me fixed
+  panel — ChatGPT (`gpt-4o-mini`) dataset context ke sath juda hua hai, **har topic par
+  baat karta hai** (vehicles bhi, studies/jokes/general bhi) aur **sara jawab ENGLISH me**
+  deta hai. Status header dikhata hai 🟢 ChatGPT ON / 🟡 Fallback mode, quick-question
+  chips aur 🗑 clear button ke sath
+- **Zero-error fallback:** ChatGPT key na ho ya API fail ho to bhi built-in rule engine
+  se **har haal me English jawab** milta hai — zero errors
 - **ML (Kaggle-trained):**
   - `train_vehicle_model.ipynb` — Kaggle par chala kar `model.joblib` banayein
   - Random Forest **price estimate** + KNN **similar vehicles** detail view me
   - Agar `model.joblib` repo me na ho to app CSV se khud train kar legi
-- **133 vehicles** ka dataset — PakWheels ke naye brands bhi shamil: Toyota, Suzuki,
-  Honda, KIA, Hyundai, MG, Changan, Haval, BYD, Chery, Omoda, Ora, Jaecoo, Jetour,
-  Deepal, Audi, BMW, Mercedes-Benz, Tesla, bikes (Honda/Yamaha/Suzuki/Road Prince/
-  United), e-bikes, cycles (har cycle ki alag photo), rickshaws, boats, helicopters,
-  aircraft aur private jets
+- **10,126 vehicles** ka dataset — cycle se le kar helicopter/private jets tak:
+  Toyota, Suzuki, Honda, KIA, Hyundai, MG, Changan, Haval, BYD, Chery, Omoda, Ora,
+  Jaecoo, Jetour, Deepal, Audi, BMW, Mercedes-Benz, Tesla, bikes (Honda/Yamaha/Suzuki/
+  Road Prince/United), e-bikes, cycles, rickshaws, boats, helicopters, aircraft aur
+  private jets — har model ke trims × saal (used) variants ke sath
 
 ## 🔑 ChatGPT connect karne ka tareeqa (optional)
 
@@ -49,12 +50,11 @@ App ChatGPT ke **bina bhi 100% chalti hai** (fallback engine). ChatGPT on karne 
 ## 📁 Files
 
 ```
-app.py                      wizard app (3 steps + detail view + ML insights + AI chat)
-ai.py                       ChatGPT integration + zero-error fallback chat engine
-chatbot_widget.py           floating multilingual chatbot (V-Bot, cached)
+app.py                      wizard app (3 steps + detail view + ML insights + V-Bot corner chat)
+ai.py                       ChatGPT integration + zero-error English fallback engine (corner dock)
 ml.py                       RF price model + KNN + helpers (money, split_list)
 images.py                   real vehicle photos + fast 480px pair helper
-vehicles.csv                dataset — 133 vehicles, 14 categories
+vehicles.csv                dataset — 10,126 vehicles, 14 categories
 train_vehicle_model.ipynb   Kaggle notebook — model.joblib banata hai
 requirements.txt            deployment packages
 ```

@@ -77,8 +77,8 @@ def ask_openai(question: str, df: pd.DataFrame):
                             "vehicles, money or buying, ALWAYS ground your answer in this exact "
                             "vehicle dataset (do not invent vehicles or prices):\n\n"
                             + _data_text(df)
-                            + "\n\nRules: reply in the SAME language the user writes in "
-                            "(English, Roman Urdu, Urdu, Hindi or Arabic). Keep answers short "
+                            + "\n\nRules: ALWAYS reply in ENGLISH, no matter which "
+                            "language the user writes in. Keep answers short "
                             "(max ~120 words). For vehicle suggestions give 1-3 concrete "
                             "vehicles with their price and the PakWheels link from the dataset. "
                             "Mention a pro (faida) and a con (nuqsan) when suggesting vehicles."
@@ -126,6 +126,7 @@ L = {
         "def": "Here's a popular choice these days",
         "askBudget": "Tell me your budget (like \"5 lakh\" or \"1 crore\") and I'll show the best options!",
         "notFound": "I couldn't find that vehicle. Popular picks:",
+        "general": "Interesting question! 🌟 I'm the vehicle expert here — but turn **ChatGPT mode ON** (add `OPENAI_API_KEY` in the app secrets) and I can chat about absolutely anything. Meanwhile, tell me your budget and I'll find your perfect ride!",
     },
     "ur": {
         "how": "Main bilkul theek hoon, shukriya! Aap kaise hain?",
@@ -142,6 +143,7 @@ L = {
         "def": "Aaj kal ye option sab se zyada pasand ho raha hai",
         "askBudget": "Apna budget batayein (jaise \"5 lakh\" ya \"1 crore\") to main best options dikhaon!",
         "notFound": "Ye vehicle mujhe nahi mili. Mashhoor options ye hain:",
+        "general": "Zabardast sawal! 🌟 **ChatGPT mode ON** karein (app secrets me `OPENAI_API_KEY` add karein) to main kisi bhi topic par poori baat kar sakta hoon. Filhal vehicles ka expert hoon — apna budget batayein, best ride dhoond deta hoon!",
     },
     "hi": {
         "how": "मैं बिल्कुल ठीक हूँ, धन्यवाद! आप कैसे हैं?",
@@ -158,6 +160,7 @@ L = {
         "def": "आजकल यह विकल्प सबसे लोकप्रिय है",
         "askBudget": "अपना बजट बताएं (जैसे \"5 लाख\" या \"1 करोड़\") तो मैं बेस्ट विकल्प दिखाऊं!",
         "notFound": "यह वाहन नहीं मिला। लोकप्रिय विकल्प:",
+        "general": "शानदार सवाल! 🌟 **ChatGPT मोड ON** करें (app secrets में `OPENAI_API_KEY` जोड़ें) तो मैं किसी भी विषय पर बात कर सकता हूँ। फिलहाल वाहन विशेषज्ञ हूँ — अपना बजट बताएं, बेस्ट राइड ढूंढ देता हूँ!",
     },
     "ar": {
         "how": "بخير، شكراً! وكيف حالك؟",
@@ -174,6 +177,7 @@ L = {
         "def": "هذا الخيار من الأكثر رواجاً هذه الأيام",
         "askBudget": "أخبرني بميزانيتك (مثل \"5 لاكھ\" أو \"1 كرور\") لأعرض لك أفضل الخيارات!",
         "notFound": "لم أجد هذه المركبة. خيارات شائعة:",
+        "general": "سؤال رائع! 🌟 شغّل **وضع ChatGPT** (أضف `OPENAI_API_KEY` في إعدادات التطبيق) لأستطيع الحديث عن أي موضوع. حالياً خبير المركبات هنا — أخبرني بميزانيتك وسأجد لك أفضل ركوب!",
     },
 }
 
@@ -240,6 +244,19 @@ def find_vehicle(df: pd.DataFrame, text: str):
     return best
 
 
+def _vehicle_sounding(n: str) -> bool:
+    """Does the text look like a vehicle/money question? (general fallback ke liye)"""
+    return bool(
+        re.search(
+            r"car|gaari|gari|bike|cycle|vehicle|sasta|sasti|mehnga|mehngi|tez|fast|speed"
+            r"|price|qeemat|kimat|kitne|kitna|budget|lakh|crore|engine|milege|mileage|suv"
+            r"|jeep|scooter|rickshaw|tractor|boat|helicopter|jet\b|plane|jahaz|seat|family"
+            r"|electric|diesel|petrol|hybrid|imported|model|gear",
+            n,
+        )
+    )
+
+
 def _cat_wish(n: str):
     """User's category wish from the wording ('sab se sasti BIKE' -> bikes only)."""
     if re.search(r"bicycle|\bcycle\b", n):
@@ -274,7 +291,8 @@ def _cards(rows, lang: str) -> str:
 
 def fallback_answer(question: str, df: pd.DataFrame) -> str:
     """Rule-based answer with smalltalk + a real vehicle suggestion, or None."""
-    lang = detect_lang(question)
+    # English-only mode: har fallback jawab English me (user request)
+    lang = "en"
     l = L[lang]
     n = _norm(question)
     small = ""
@@ -314,9 +332,13 @@ def fallback_answer(question: str, df: pd.DataFrame) -> str:
         r = find_vehicle(df, question)
         if r is not None:
             veh = l["found"] + ":\n\n" + _card(r, lang)
-        else:
+        elif _vehicle_sounding(n):
             pop = df[df["name"].str.contains("Alto|Swift|CD 70 Dream|Sportage", regex=True)].head(3)
             veh = l["notFound"] + "\n\n" + _cards(pop, lang) + "\n\n💬 " + l["askBudget"]
+        else:
+            # general / non-vehicle baat (ChatGPT OFF ho to friendly jawab + suggestion)
+            pop = df[df["name"].str.contains("Alto|Swift|CD 70 Dream|Sportage", regex=True)].head(1)
+            veh = l["general"] + "\n\n" + l["def"] + ":\n\n" + _cards(pop, lang)
 
     return (small + "\n\n" + veh).strip()
 
@@ -330,33 +352,73 @@ def _reply(question: str, df: pd.DataFrame) -> str:
     try:
         return fallback_answer(question, df)
     except Exception:
-        return "Maaf kijiye, thori technical masla hua — dobara likhein? 🙂"
+        return "Sorry, something went wrong on my side — please try again 🙂"
+
+
+_CHIPS = ["Hi 👋", "Best car under 15 lakh", "Cheapest bike", "Fastest vehicle"]
+
+
+def _ask(text: str, df: pd.DataFrame):
+    """User message -> answer -> history -> rerun (chat_input aur chips dono isko use karte hain)."""
+    ss = st.session_state
+    text = (text or "").strip()
+    if not text:
+        return
+    ss.chat_hist.append({"role": "user", "content": text})
+    with st.spinner("V-Bot is thinking..."):
+        ans = _reply(text, df)
+    ss.chat_hist.append({"role": "assistant", "content": ans})
+    st.rerun()
 
 
 def render_chat(df: pd.DataFrame):
-    """Native Streamlit chat (ChatGPT-powered). Call once at the end of app.py."""
+    """V-Bot corner dock (bottom-right, fixed panel).
+
+    ChatGPT key ho to HAR baat ka jawab (koi bhi topic); na ho to built-in
+    engine vehicles + smalltalk handle karta hai aur general sawal ka friendly
+    jawab deta hai. Koi error nahi - har haal me jawab milta hai.
+    Call once at the end of app.py.
+    """
     ss = st.session_state
     ss.setdefault("chat_hist", [])
+    gpt_on = bool(_key())
 
-    st.markdown(
-        "<div class='stepchip'>[ <b>V-BOT</b> ] &middot; ChatGPT se juda hua &middot; har sawal ka jawab"
-        " (English &middot; Roman Urdu &middot; हिंदी &middot; عربي)</div>",
-        unsafe_allow_html=True,
-    )
+    # border=True zaroori hai - CSS isi wrapper ko corner me fix karta hai
+    with st.container(border=True):
+        hc, xc = st.columns([5, 1])
+        with hc:
+            status = (
+                "🟢 ChatGPT <b>ON</b> &middot; ask me anything, any topic"
+                if gpt_on
+                else "🟡 Fallback mode &middot; vehicles + small talk"
+            )
+            st.markdown(
+                f"<div class='stepchip'>[ <b>V-BOT</b> ] &middot; {status}</div>",
+                unsafe_allow_html=True,
+            )
+        with xc:
+            if st.button("🗑", key="vbot_clear", use_container_width=True):
+                ss.chat_hist = []
+                st.rerun()
 
-    with st.container():
-        for m in ss.chat_hist:
-            with st.chat_message(m["role"]):
-                st.markdown(m["content"])
+        with st.container(height=330, border=False):
+            if not ss.chat_hist:
+                st.chat_message("assistant").markdown(
+                    "Hello! 👋 **I'm V-Bot** — your vehicle & budget expert. "
+                    "With ChatGPT ON, I can chat about *anything* — studies, jokes, "
+                    "general knowledge, you name it!\n\n"
+                    "Ask me below — pick a chip or just type ⬇️"
+                )
+            for m in ss.chat_hist:
+                with st.chat_message(m["role"]):
+                    st.markdown(m["content"])
 
-    q = st.chat_input("Sawal likhein... (jaise: 15 lakh ki best car?)")
-    if q and q.strip():
-        ss.chat_hist.append({"role": "user", "content": q.strip()})
-        with st.chat_message("user"):
-            st.markdown(q.strip())
-        with st.chat_message("assistant"):
-            with st.spinner("V-Bot soch raha hai..."):
-                ans = _reply(q.strip(), df)
-            st.markdown(ans)
-        ss.chat_hist.append({"role": "assistant", "content": ans})
-        st.rerun()
+        chips = st.columns(4)
+        for col, chip in zip(chips, _CHIPS):
+            with col:
+                if st.button(chip, key=f"chip_{chip}", use_container_width=True):
+                    _ask(chip, df)
+
+        q = st.chat_input("Type your question... (vehicles or anything else)")
+        if q:
+            _ask(q, df)
